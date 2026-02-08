@@ -268,3 +268,245 @@ This dummy project successfully demonstrates how **Keycloak integrates with Djan
 ---
 
 Happy experimenting with Keycloak 🚀
+
+---
+
+## Faculty Client & Endpoint Testing (Extended Scenario)
+
+### Realm Setup
+
+* **Global Realm**: `universe-realm`
+* All clients, users, and roles exist inside this single realm.
+
+### Clients
+
+1. **student-client**
+2. **faculty-client**
+
+Each client represents a separate application protected by Keycloak.
+
+---
+
+## Role Design
+
+### Student Roles (student-client)
+
+* `view-course`
+
+**Assigned Users**:
+
+* `hariom` → view-course
+* `aritra` → view-course
+
+### Faculty Roles (faculty-client)
+
+* `create-course`
+
+**Assigned Users**:
+
+* `aman` → create-course
+* `farhan` → create-course
+
+Roles are **client-level roles**, not realm roles.
+
+---
+
+## API Endpoints Design
+
+### Student App Endpoints
+
+| Endpoint      | Access Type | Description                               |
+| ------------- | ----------- | ----------------------------------------- |
+| `/public/`    | Public      | No authentication required                |
+| `/protected/` | Protected   | Requires valid token + `view-course` role |
+
+**Public Endpoint Response**:
+
+```json
+{
+  "message": "Student public endpoint"
+}
+```
+
+---
+
+### Faculty App Endpoints
+
+| Endpoint      | Access Type | Description                                 |
+| ------------- | ----------- | ------------------------------------------- |
+| `/public/`    | Public      | No authentication required                  |
+| `/protected/` | Protected   | Requires valid token + `create-course` role |
+
+**Public Endpoint Response**:
+
+```json
+{
+  "message": "Faculty public endpoint"
+}
+```
+
+---
+
+## Authentication Testing (Failures & Success)
+
+### 1. Realm Does Not Exist Error ❌
+
+**Cause**:
+
+* Wrong realm name in token URL
+
+**Error**:
+
+```json
+{
+  "error": "Realm does not exist"
+}
+```
+
+**Fix**:
+
+* Ensure realm name is exactly:
+
+```
+universe-realm
+```
+
+---
+
+### 2. Account Is Not Fully Set Up ❌
+
+**Cause**:
+
+* User password marked as **Temporary**
+* Required actions enabled (update password, verify email, OTP)
+
+**Error**:
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Account is not fully set up"
+}
+```
+
+**Fix**:
+
+* Go to Keycloak Admin Console
+* Users → Credentials → Set Password
+* Set `Temporary = OFF`
+* Disable all required actions
+
+---
+
+### 3. Successful Login (Password Grant) ✅
+
+**Token Endpoint**:
+
+```
+POST http://localhost:8080/realms/universe-realm/protocol/openid-connect/token
+```
+
+**Payload (Student Example)**:
+
+```
+grant_type=password
+client_id=student-client
+client_secret=<student-client-secret>
+username=hariom
+password=hariom
+```
+
+**Payload (Faculty Example)**:
+
+```
+grant_type=password
+client_id=faculty-client
+client_secret=<faculty-client-secret>
+username=aman
+password=aman
+```
+
+**Success Response**:
+
+* `access_token`
+* `refresh_token`
+* `expires_in`
+
+---
+
+## Authorization Testing
+
+### Student Protected Endpoint
+
+**Request**:
+
+```
+GET /protected/
+Authorization: Bearer <access_token>
+```
+
+* Works for: `hariom`, `aritra`
+* Fails for: `aman`, `farhan`
+
+---
+
+### Faculty Protected Endpoint
+
+**Request**:
+
+```
+GET /protected/
+Authorization: Bearer <access_token>
+```
+
+* Works for: `aman`, `farhan`
+* Fails for: `hariom`, `aritra`
+
+---
+
+## Common Runtime Error (Django)
+
+### Missing Authorization Header ❌
+
+**Error**:
+
+```
+IndexError: list index out of range
+```
+
+**Cause**:
+
+* Request sent without Authorization header
+
+**Fix**:
+
+* Always send:
+
+```
+Authorization: Bearer <token>
+```
+
+* Add defensive checks in Django view
+
+---
+
+## Key Learning Outcomes
+
+* One realm can manage multiple applications
+* Clients isolate roles and permissions
+* Tokens are client-specific
+* Role-based access control enforced via JWT
+* IAM errors are mostly configuration issues
+
+---
+
+## Conclusion
+
+This project demonstrates a real-world **multi-client IAM architecture** using Keycloak with Django:
+
+* Centralized authentication
+* Client-specific authorization
+* Clear separation of student and faculty access
+* Practical debugging of IAM failures
+
+This setup mirrors production-grade identity systems used in enterprise applications.
