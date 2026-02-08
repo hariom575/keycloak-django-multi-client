@@ -57,6 +57,13 @@ keycloak-django-multi-client/
 │   └── app/
 │       ├── views.py
 │       └── urls.py
+├── faculty-app/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── manage.py
+│   └── app/
+│       ├── views.py
+│       └── urls.py
 │
 └── README.md
 ```
